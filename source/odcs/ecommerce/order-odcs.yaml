@@ -9,15 +9,20 @@ domain: ecommerce
 dataProduct: order management
 description:
   purpose: describes order management data
+  customProperties:
+    - property: namespace
+      value: com.example.ecommerce.order
 schema:
-  - name: order
+  - name: Order
     description: contains order data
     properties:
       - name: id
         description: the order identifier
         logicalType: string
         physicalType: string
+        required: true
       - name: name
         description: the order name
         logicalType: string
         physicalType: string
+        required: true

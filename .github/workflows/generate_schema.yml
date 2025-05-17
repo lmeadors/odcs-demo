@@ -1,0 +1,18 @@
+on:
+  push:
+    branches:
+      - main
+jobs:
+  generate-schema:
+    runs-on: ubuntu-latest
+    container:
+      image: datacontract/cli:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify DataContract CLI version
+        run: |
+          # This command runs inside the datacontract/cli container
+          datacontract --version
+          datacontract export --format avro source/odcs/ecommerce/order-odcs.yaml
