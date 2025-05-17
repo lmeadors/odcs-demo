@@ -1,0 +1,23 @@
+# nonk8s
+version: 0.0.1
+kind: DataContract
+apiVersion: v3.0.1
+id: 305b72db-e2dc-4817-87af-8b97aec038e7
+name: Ecommerce Order Management Data Contract
+status: draft
+domain: ecommerce
+dataProduct: order management
+description:
+  purpose: describes order management data
+schema:
+  - name: order
+    description: contains order data
+    properties:
+      - name: id
+        description: the order identifier
+        logicalType: string
+        physicalType: string
+      - name: name
+        description: the order name
+        logicalType: string
+        physicalType: string
