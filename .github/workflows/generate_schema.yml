@@ -1,7 +1,11 @@
+name: Generate Avro & Commit
+
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
 jobs:
   generate-schema:
     runs-on: ubuntu-latest
@@ -10,21 +14,56 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        # Let this run on the host as default. It will clone the repo to /__w/... on the host.
+
+      - name: Diagnose Container Filesystem and Workspace Mount
+        run: |
+          echo "--- Current PWD when this step starts ---"
+          pwd # What is the default PWD inside the container?
+          
+          echo "--- Listing root directory contents (`/`) ---"
+          ls -la /
+          
+          echo "--- Listing /github contents (if it exists) ---"
+          # This command will show if /github exists and its contents.
+          # If /github doesn't exist, this will print an error, which is useful info.
+          ls -la /github || echo "/github does not exist or is not accessible."
+          
+          echo "--- Listing /github/workspace contents (if it exists) ---"
+          # This will show if /github/workspace exists and its contents (your repo).
+          ls -la /github/workspace || echo "/github/workspace does not exist or is not accessible."
+          
+          echo "--- Attempting to find .git directory (might take a moment) ---"
+          # This will search the entire container filesystem for a .git directory.
+          # This can be slow, but it's a fallback if /github/workspace isn't the spot.
+          find / -name ".git" 2>/dev/null | head -n 5 || echo "Could not find .git directory after extensive search."
+
+          # Attempt to cd into /github/workspace and fail if it doesn't work.
+          echo "--- Testing 'cd /github/workspace' ---"
+          cd /github/workspace || { echo "FATAL: Cannot change directory to /github/workspace as expected. Workspace mount failed or path is incorrect."; exit 1; }
+          echo "Successfully changed directory to /github/workspace."
+          pwd
+          ls -la
+          git --version # If we got here, git should work.
+
+      # The rest of your steps will depend on the output of the diagnostic.
+      # Assuming /github/workspace is now confirmed to be the place,
+      # these steps would proceed with 'cd /github/workspace' as their first line.
 
       - name: Create output directories
         run: |
+          cd /github/workspace # Assuming success in the diagnostic step
           mkdir -p output/ecommerce/avro/
 
       - name: Export AVRO schema for ecommerce
         run: |
+          cd /github/workspace # Assuming success in the diagnostic step
           for f in source/odcs/ecommerce/*.yml; do
             if [ -f "$f" ]; then
               echo "Processing $f"
-              # Get the base name of the file (e.g., "order")
               filename=$(basename -- "$f")
               filename_no_ext="${filename%.*}"
           
-              # Export to the output directory with a corresponding Avro filename
               datacontract export \
                 --input "$f" \
                 --output "output/ecommerce/avro/${filename_no_ext}.avsc" \
@@ -34,12 +73,14 @@ jobs:
 
       - name: Configure Git
         run: |
+          cd /github/workspace # Assuming success in the diagnostic step
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Add and Commit changes
         id: commit_changes
         run: |
+          cd /github/workspace # Assuming success in the diagnostic step
           git add output/ecommerce/avro/
           
           if ! git diff --cached --exit-code; then
@@ -54,4 +95,5 @@ jobs:
       - name: Push changes
         if: steps.commit_changes.outputs.has_changes == 'true'
         run: |
+          cd /github/workspace # Assuming success in the diagnostic step
           git push
