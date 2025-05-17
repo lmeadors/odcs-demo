@@ -11,8 +11,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify DataContract CLI version
+      - name: Create output directories
         run: |
-          # This command runs inside the datacontract/cli container
-          datacontract --version
-          datacontract export --format avro source/odcs/ecommerce/order-odcs.yaml
+          mkdir -p output/ecommerce/avro/
+
+      - name: Export AVRO schema for ecommerce
+        run: |
+          for f in source/odcs/ecommerce/*.yml; do
+            if [ -f "$f" ]; then
+              echo "Processing $f"
+              # Get the base name of the file (e.g., "order")
+              filename=$(basename -- "$f")
+              filename_no_ext="${filename%.*}"
+          
+              # Export to the output directory with a corresponding Avro filename
+              datacontract export \
+                --input "$f" \
+                --output "output/ecommerce/avro/${filename_no_ext}.avsc" \
+                --format avro
+            fi
+          done
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add and Commit changes
+        id: commit_changes
+        run: |
+          git add output/ecommerce/avro/
+          
+          if ! git diff --cached --exit-code; then
+            echo "Changes detected, committing..."
+            git commit -m "chore: Generate Avro schemas for ecommerce data"
+            echo "::set-output name=has_changes::true"
+          else
+            echo "No changes to commit."
+            echo "::set-output name=has_changes::false"
+          fi
+
+      - name: Push changes
+        if: steps.commit_changes.outputs.has_changes == 'true'
+        run: |
+          git push
