@@ -1,4 +1,4 @@
-name: Generate Avro & Commit
+name: Generate Avro & Commit (using docker run directly)
 
 on:
   push:
@@ -8,79 +8,73 @@ on:
 
 jobs:
   generate-schema:
-    runs-on: ubuntu-latest
-    container:
-      image: datacontract/cli:latest
+    runs-on: ubuntu-latest # <-- Job runs on the standard Ubuntu runner VM
+    # REMOVE the 'container:' key and its image here.
+    # We will invoke Docker directly in the steps.
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-        # Let this run on the host as default. It will clone the repo to /__w/... on the host.
+        with:
+          # Important: Checkout with write permissions to allow pushing changes
+          # This uses the default GITHUB_TOKEN.
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Diagnose Container Filesystem and Workspace Mount
+      - name: Verify working directory and Git (on host)
         run: |
-          echo "--- Current PWD when this step starts ---"
-          pwd # What is the default PWD inside the container?
-          
-          echo "--- Listing root directory contents (`/`) ---"
-          ls -la /
-          
-          echo "--- Listing /github contents (if it exists) ---"
-          # This command will show if /github exists and its contents.
-          # If /github doesn't exist, this will print an error, which is useful info.
-          ls -la /github || echo "/github does not exist or is not accessible."
-          
-          echo "--- Listing /github/workspace contents (if it exists) ---"
-          # This will show if /github/workspace exists and its contents (your repo).
-          ls -la /github/workspace || echo "/github/workspace does not exist or is not accessible."
-          
-          echo "--- Attempting to find .git directory (might take a moment) ---"
-          # This will search the entire container filesystem for a .git directory.
-          # This can be slow, but it's a fallback if /github/workspace isn't the spot.
-          find / -name ".git" 2>/dev/null | head -n 5 || echo "Could not find .git directory after extensive search."
-
-          # Attempt to cd into /github/workspace and fail if it doesn't work.
-          echo "--- Testing 'cd /github/workspace' ---"
-          cd /github/workspace || { echo "FATAL: Cannot change directory to /github/workspace as expected. Workspace mount failed or path is incorrect."; exit 1; }
-          echo "Successfully changed directory to /github/workspace."
-          pwd
+          echo "Current working directory on runner (host):"
+          pwd # This should output /__w/odcs-demo/odcs-demo
+          echo "Contents of current directory:"
           ls -la
-          git --version # If we got here, git should work.
-
-      # The rest of your steps will depend on the output of the diagnostic.
-      # Assuming /github/workspace is now confirmed to be the place,
-      # these steps would proceed with 'cd /github/workspace' as their first line.
+          echo "Git version on runner (host):"
+          git --version # This should work fine
 
       - name: Create output directories
         run: |
-          cd /github/workspace # Assuming success in the diagnostic step
+          # This runs on the host runner's filesystem
           mkdir -p output/ecommerce/avro/
 
-      - name: Export AVRO schema for ecommerce
+      - name: Export AVRO schema for ecommerce using Docker
         run: |
-          cd /github/workspace # Assuming success in the diagnostic step
+          echo "Pulling datacontract/cli:latest..."
+          docker pull datacontract/cli:latest
+          
+          # The current working directory on the host is the repository root ($PWD or $GITHUB_WORKSPACE)
+          # We will mount this directory into the Docker container at /app (or any path you prefer).
+          # Then, we'll run datacontract commands relative to /app inside the container.
+          
           for f in source/odcs/ecommerce/*.yml; do
             if [ -f "$f" ]; then
               echo "Processing $f"
               filename=$(basename -- "$f")
               filename_no_ext="${filename%.*}"
           
-              datacontract export \
-                --input "$f" \
+              # Execute datacontract export inside the container
+              # --rm: remove container after exit
+              # -v "$PWD":/app: mounts the current host directory (your repo root) to /app inside the container
+              # -w /app: sets /app as the working directory inside the container for this command
+              # datacontract/cli:latest: the Docker image to use
+              # The rest are the arguments to the datacontract CLI within the container
+              docker run --rm \
+                -v "$PWD":/app \
+                -w /app \
+                datacontract/cli:latest \
+                export \
+                --input "source/odcs/ecommerce/$filename" \
                 --output "output/ecommerce/avro/${filename_no_ext}.avsc" \
                 --format avro
             fi
           done
 
       - name: Configure Git
+        # These commands run directly on the ubuntu-latest runner, which has Git installed.
         run: |
-          cd /github/workspace # Assuming success in the diagnostic step
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Add and Commit changes
         id: commit_changes
         run: |
-          cd /github/workspace # Assuming success in the diagnostic step
           git add output/ecommerce/avro/
           
           if ! git diff --cached --exit-code; then
@@ -95,5 +89,4 @@ jobs:
       - name: Push changes
         if: steps.commit_changes.outputs.has_changes == 'true'
         run: |
-          cd /github/workspace # Assuming success in the diagnostic step
           git push
