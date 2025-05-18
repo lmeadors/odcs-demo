@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "Order",
+  "doc": "contains order data",
+  "fields": [
+    {
+      "name": "id",
+      "doc": "the order identifier",
+      "type": "string"
+    },
+    {
+      "name": "name",
+      "doc": "the order name",
+      "type": "string"
+    }
+  ]
+}
