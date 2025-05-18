@@ -26,3 +26,24 @@ schema:
         logicalType: string
         physicalType: string
         required: true
+  - name: OrderLine
+    description: contains order line data
+    properties:
+      - name: id
+        description: the order line identifier
+        logicalType: string
+        required: true
+      - name: order_id
+        description: the order identifier
+        logicalType: string
+        required: true
+      - name: product_id
+        description: the identifier of the product ordered
+        logicalType: string
+        required: true
+      - name: quantity
+        description: number of items ordered
+        logicalType: integer
+        exclusiveMinimum: "0"
+        required: true
+
