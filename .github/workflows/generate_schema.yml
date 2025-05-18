@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions: # <-- ADD THIS BLOCK HERE (at the top level, under 'on:')
+  contents: write # Grant write access to repository contents
+
 jobs:
   generate-schema:
     runs-on: ubuntu-latest # <-- Job runs on the standard Ubuntu runner VM
