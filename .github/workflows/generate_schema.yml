@@ -86,10 +86,10 @@ jobs:
           if ! git diff --cached --exit-code; then
             echo "Changes detected, committing..."
             git commit -m "chore: Generate Avro schemas for ecommerce data"
-            echo "::set-output name=has_changes::true"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "No changes to commit."
-            echo "::set-output name=has_changes::false"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Push changes
