@@ -38,7 +38,9 @@ jobs:
         run: |
           echo "Pulling datacontract/cli:latest..."
           docker pull datacontract/cli:latest
-          
+
+          ls -la source/odcs/ecommerce
+
           # The current working directory on the host is the repository root ($PWD or $GITHUB_WORKSPACE)
           # We will mount this directory into the Docker container at /app (or any path you prefer).
           # Then, we'll run datacontract commands relative to /app inside the container.
