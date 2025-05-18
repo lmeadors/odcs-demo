@@ -53,7 +53,8 @@ jobs:
               echo "Processing $f"
               filename=$(basename -- "$f")
               filename_no_ext="${filename%.*}"
-          
+              final_output_name="${filename_no_ext%-odcs}" # <-- CRITICAL CHANGE HERE
+
               # Execute datacontract export inside the container
               # --rm: remove container after exit
               # -v "$PWD":/app: mounts the current host directory (your repo root) to /app inside the container
@@ -65,7 +66,7 @@ jobs:
                 -w /app \
                 datacontract/cli:latest \
                 export \
-                --output "output/ecommerce/avro/${filename_no_ext}.avsc" \
+                --output "output/ecommerce/avro/${final_output_name}.avsc" \
                 --format avro \
                 "source/odcs/ecommerce/$filename"
             fi
