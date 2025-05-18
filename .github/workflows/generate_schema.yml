@@ -62,9 +62,9 @@ jobs:
                 -w /app \
                 datacontract/cli:latest \
                 export \
-                --input "source/odcs/ecommerce/$filename" \
                 --output "output/ecommerce/avro/${filename_no_ext}.avsc" \
-                --format avro
+                --format avro \
+                "source/odcs/ecommerce/$filename"
             fi
           done
 
