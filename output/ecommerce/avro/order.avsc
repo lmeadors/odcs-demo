@@ -12,6 +12,39 @@
       "name": "name",
       "doc": "the order name",
       "type": "string"
+    },
+    {
+      "name": "order_lines",
+      "doc": "a list of order lines",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "order_lines",
+          "fields": [
+            {
+              "name": "id",
+              "doc": "the order line identifier",
+              "type": "string"
+            },
+            {
+              "name": "order_id",
+              "doc": "the order identifier",
+              "type": "string"
+            },
+            {
+              "name": "product_id",
+              "doc": "the identifier of the product ordered",
+              "type": "string"
+            },
+            {
+              "name": "quantity",
+              "doc": "number of items ordered",
+              "type": "int"
+            }
+          ]
+        }
+      }
     }
   ]
 }
