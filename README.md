@@ -16,3 +16,4 @@ python -m pip install 'datacontract-cli[all]'
 ## References
 
 - https://github.com/datacontract/datacontract-cli
+- https://opendataproducts.org/DataQoS-as-code/
