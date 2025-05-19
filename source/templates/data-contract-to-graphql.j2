@@ -1,0 +1,91 @@
+# -----------------------------------------------------------------------------
+# Generated GraphQL Types from Data Contract: {{ data_contract.info.title }} ({{ data_contract.info.version }})
+# Data Contract ID: {{ data_contract.id }}
+# -----------------------------------------------------------------------------
+{#-
+   This filter maps datacontract types to GraphQL scalar types.
+   You can extend this mapping as needed.
+   For complex types like 'object' or 'array', it expects nested definitions
+   or assumes the 'items' type for arrays.
+-#}
+{%- macro map_datacontract_type_to_graphql(field) -%}
+  {%- set dc_type = field.type -%}
+  {%- set dc_format = field.format | default('') -%} {# Get format if available #}
+  {%- if dc_type == 'string' -%}
+    {% if dc_format == 'uuid' -%}ID
+    {% elif dc_format == 'email' -%}String {# Or a custom Email scalar if defined elsewhere #}
+    {% else -%}String
+    {% endif %}
+  {% elif dc_type == 'integer' -%}Int
+  {% elif dc_type == 'number' -%}Float
+  {% elif dc_type == 'boolean' -%}Boolean
+  {% elif dc_type == 'timestamp' -%}String {# Often mapped to String or custom DateTime scalar #}
+  {% elif dc_type == 'array' %}
+    {# If 'items' is an object, assume it's a nested type; otherwise, try to map the item type #}
+    {% if field.items and field.items.type == 'object' %}
+      {% if field.items.title %}
+        [{{ field.items.title | capitalize }}!]
+      {% else %}
+        [JSONObject!] {# Fallback for unnamed inline objects, requires custom scalar #}
+      {% endif %}
+    {% elif field.items %}
+      [{{ map_datacontract_type_to_graphql(field.items) }}!] {# Recursively map item type #}
+    {% else %}
+      [String!] {# Default for untyped arrays #}
+    {% endif %}
+  {% elif dc_type == 'object' %}
+    {# For inline object types, we can generate a nested type.
+       This example simplifies by naming it based on the parent field.
+       A more robust solution might use a dedicated top-level type or a custom scalar. #}
+    {% if field.title %}
+      {{ field.title | capitalize }}
+    {% else %}
+      JSONObject {# Fallback for unnamed inline objects, requires custom scalar #}
+    {% endif %}
+  {% else %}
+    String {# Fallback for unknown types #}
+  {% endif %}
+{%- endmacro -%}
+
+{%- for model_name, model in data_contract.models.items() %}
+"""
+{{ model.description if model.description else 'Description for ' ~ model_name }}
+"""
+type {{ model_name | capitalize -}} {
+{% for field_name, field in model.fields.items() -%}
+  {# Apply type mapping and add non-nullable indicator #}
+  {{ field_name }}: {{ map_datacontract_type_to_graphql(field) -}}{{ "!" if field.required else "" -}} {# {{ field.description }} #}
+{% endfor %}
+}
+
+{# Handle nested object types within the same output, if they are inline objects #}
+{% for field_name, field in model.fields.items() %}
+  {% if field.type == 'object' and field.fields %}
+    {# Define a nested type for the inline object #}
+    """
+    {{ field.description if field.description else 'Details for ' ~ model_name ~ ' ' ~ field_name }}
+    """
+    type {{ model_name | capitalize }}{{ field_name | capitalize }} {
+    {% for nested_field_name, nested_field in field.fields.items() %}
+      {{ nested_field_name }}: {{ map_datacontract_type_to_graphql(nested_field) }}{{ "!" if nested_field.required else "" }}
+    {% endfor %}
+    }
+  {% elif field.type == 'array' and field.items and field.items.type == 'object' and field.items.fields %}
+    {# Define a nested type for objects within an array #}
+    """
+    {{ field.description if field.description else 'Item details for ' ~ model_name ~ ' ' ~ field_name ~ ' array' }}
+    """
+    type {{ model_name | capitalize }}{{ field_name | capitalize }}Item {
+    {% for nested_field_name, nested_field in field.items.fields.items() %}
+      {{ nested_field_name }}: {{ map_datacontract_type_to_graphql(nested_field) }}{{ "!" if nested_field.required else "" }}
+    {% endfor %}
+    }
+  {% endif %}
+{% endfor %}
+
+{% endfor %}
+{#
+# --- Standard GraphQL Scalars (if not already defined elsewhere) ---
+# scalar DateTime
+# scalar JSONObject # For untyped objects/arrays of objects if you choose not to define them inline.
+#}

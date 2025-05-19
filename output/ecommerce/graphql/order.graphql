@@ -1,0 +1,61 @@
+# -----------------------------------------------------------------------------
+# Generated GraphQL Types from Data Contract: Ecommerce Order Management Data Contract (0.0.1)
+# Data Contract ID: 305b72db-e2dc-4817-87af-8b97aec038e7
+# -----------------------------------------------------------------------------
+"""
+contains order data
+"""
+type Order{
+
+  id: String
+    
+  !
+
+  name: String
+    
+  !
+
+  order_lines: 
+    
+    
+      
+        [JSONObject!] 
+      
+    
+  !
+
+}
+
+
+
+  
+
+  
+
+  
+    
+    """
+    a list of order lines
+    """
+    type OrderOrder_linesItem {
+    
+      id: String
+    
+  !
+    
+      order_id: String
+    
+  !
+    
+      product_id: String
+    
+  !
+    
+      quantity: Int
+  !
+    
+    }
+  
+
+
+
